@@ -1,5 +1,5 @@
 require(httr)
-require(tidyverse)
+require(dplyr)
 require(lubridate)
 
 
