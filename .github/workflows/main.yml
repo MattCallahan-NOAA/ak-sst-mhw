@@ -22,6 +22,8 @@ jobs:
             any::dplyr
             any::lubridate
             any::httr
+            any::ggplot2
+            any::sf
             
       - name: Check out repository
         uses: actions/checkout@v3
