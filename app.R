@@ -47,7 +47,7 @@ server <- function(input, output) {
   ####--------------------------------------------------------------####
   #create first tab that will hopefully load before the other tabs
   output$ESR_Map<-renderImage({
-    filename <- normalizePath(file.path('Figures/esr_map_depth_filters.png'))
+    filename <- normalizePath(file.path('Figures/dailysstmap.png'))
     
     # Return a list containing the filename and alt text
     list(src = filename,
