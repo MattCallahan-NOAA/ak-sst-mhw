@@ -126,11 +126,6 @@ server <- function(input, output, session) {
   current.year <- max(BSdata$year2)
   last.year <- current.year-1
   
-  climatology_start_year <- 1985
-  climatology_end_year <- 2014
-  mean.years <- climatology_start_year:climatology_end_year 
-  mean.lab <- paste0("Mean ",climatology_start_year,"-",climatology_end_year)
-
   observeEvent(input$mhw_baseline_bs, {
     req(input$mhw_baseline_bs)
     if (!identical(input$mhw_baseline_bs, input$mhw_baseline_goa))
@@ -162,18 +157,25 @@ server <- function(input, output, session) {
     }
   })
 
+  mean_period <- reactive({
+    pd <- clim_period()
+    start_y <- year(as_date(pd$start_date))
+    end_y <- year(as_date(pd$end_date))
+    list(years = start_y:end_y, lab = paste0("Mean ", start_y, "-", end_y))
+  })
+
   
   ####---------------------------------------------------####
   #Plots for P1
   #  Create plotting function that will allow selection of 2 ESR regions
-  BSplotfun <- function(region1,region2){
+  BSplotfun <- function(region1, region2, mean_years, mean_lab){
     mylines_base <- ggplot() +
       geom_line(data=BSdata %>% filter(year2<last.year & esr_region%in%(c(region1,region2))), # Older years are grey lines.
                 aes(newdate,meansst,group=factor(year2),col='mygrey'),size=0.3) +
       geom_line(data=BSdata %>% filter(year2==last.year & esr_region%in%(c(region1,region2))), # The previous year
                 aes(newdate,meansst,color='last.year.color'),size=0.75) +
       geom_line(data=BSdata %>% 
-                  filter(year%in%mean.years & esr_region%in%(c(region1,region2))) %>% # The mean from 1986-2015
+                  filter(year%in%mean_years & esr_region%in%(c(region1,region2))) %>%
                   group_by(esr_region,newdate) %>% 
                   summarise(meantemp=mean(meansst,na.rm=TRUE)),
                 aes(newdate,meantemp,col='mean.color'),size=0.65,linetype="solid") +
@@ -183,7 +185,7 @@ server <- function(input, output, session) {
       scale_color_manual(name="",
                          breaks=c('current.year.color','last.year.color','mygrey','mean.color'),
                          values=c('current.year.color'=current.year.color,'last.year.color'=last.year.color,'mygrey'=SeagrassGreen4,'mean.color'=mean.color),
-                         labels=c(current.year,last.year,paste0('1985-',last.year-1),mean.lab)) +
+                         labels=c(current.year,last.year,paste0('1985-',last.year-1),mean_lab)) +
       scale_linetype_manual(values=c("solid","solid","solid","dashed")) +
       ylab("Sea Surface Temperature (°C)") + 
       xlab("") +
@@ -206,8 +208,11 @@ server <- function(input, output, session) {
     ggdraw(mylines_base)
   }
   
-  pb1 <-reactive(BSplotfun("Northern Bering Sea","Southeastern Bering Sea") + 
-    draw_image("Figures/fisheries_header_logo_jul2019.png",scale=0.2,x=mylogox,y=mylogoy,hjust=0.35))
+  pb1 <- reactive({
+    mp <- mean_period()
+    BSplotfun("Northern Bering Sea", "Southeastern Bering Sea", mp$years, mp$lab) +
+      draw_image("Figures/fisheries_header_logo_jul2019.png", scale = 0.2, x = mylogox, y = mylogoy, hjust = 0.35)
+  })
   
   ####-------------------------------------------------####
   #Code used for all lower panels
@@ -408,14 +413,14 @@ server <- function(input, output, session) {
     arrange(read_date) 
   ####---------------------------------------------------------------#####
   #  Create plotting function that will allow selection of 2 ESR regions
-  GOAplotfun <- function(region1,region2){
+  GOAplotfun <- function(region1, region2, mean_years, mean_lab){
     mylines_base <- ggplot() +
       geom_line(data=GOAdata %>% filter(year2<last.year & esr_region%in%(c(region1,region2))), # Older years are grey lines.
                 aes(newdate,meansst,group=factor(year2),col='mygrey'),size=0.3) +
       geom_line(data=GOAdata %>% filter(year2==last.year & esr_region%in%(c(region1,region2))), # The previous year
                 aes(newdate,meansst,color='last.year.color'),size=0.75) +
       geom_line(data=GOAdata %>% 
-                  filter(year%in%mean.years & esr_region%in%(c(region1,region2))) %>% # The mean from 1986-2015
+                  filter(year%in%mean_years & esr_region%in%(c(region1,region2))) %>%
                   group_by(esr_region,newdate) %>% 
                   summarise(meantemp=mean(meansst,na.rm=TRUE)),
                 aes(newdate,meantemp,col='mean.color'),size=0.65,linetype="solid") +
@@ -425,7 +430,7 @@ server <- function(input, output, session) {
       scale_color_manual(name="",
                          breaks=c('current.year.color','last.year.color','mygrey','mean.color'),
                          values=c('current.year.color'=current.year.color,'last.year.color'=last.year.color,'mygrey'=SeagrassGreen4,'mean.color'=mean.color),
-                         labels=c(current.year,last.year,paste0('1985-',last.year-1),mean.lab)) +
+                         labels=c(current.year,last.year,paste0('1985-',last.year-1),mean_lab)) +
       scale_linetype_manual(values=c("solid","solid","solid","dashed")) +
       ylab("Sea Surface Temperature (°C)") + 
       xlab("") +
@@ -448,8 +453,11 @@ server <- function(input, output, session) {
     ggdraw(mylines_base)
   }
   
-  pg1 <- reactive(GOAplotfun("Western Gulf of Alaska","Eastern Gulf of Alaska") +
-    draw_image("Figures/fisheries_header_logo_jul2019.png",scale=0.2,x=mylogox,y=mylogoy,hjust=0.35))
+  pg1 <- reactive({
+    mp <- mean_period()
+    GOAplotfun("Western Gulf of Alaska", "Eastern Gulf of Alaska", mp$years, mp$lab) +
+      draw_image("Figures/fisheries_header_logo_jul2019.png", scale = 0.2, x = mylogox, y = mylogoy, hjust = 0.35)
+  })
   
   #Create bottom panel
   
@@ -597,14 +605,14 @@ server <- function(input, output, session) {
   #change legend position
   AIlegx <- 0.375
   #  Create plotting function that will allow selection of 3 ESR regions
-  AIplotfun <- function(region1,region2,region3){
+  AIplotfun <- function(region1, region2, region3, mean_years, mean_lab){
     mylines_base <- ggplot() +
       geom_line(data=AIdata %>% filter(year2<last.year & esr_region%in%(c(region1,region2,region3))), # Older years are grey lines.
                 aes(newdate,meansst,group=factor(year2),col='mygrey'),size=0.3) +
       geom_line(data=AIdata %>% filter(year2==last.year & esr_region%in%(c(region1,region2,region3))), # The previous year
                 aes(newdate,meansst,color='last.year.color'),size=0.75) +
       geom_line(data=AIdata %>% 
-                  filter(year%in%mean.years & esr_region%in%(c(region1,region2,region3))) %>% # The mean from 1986-2015
+                  filter(year%in%mean_years & esr_region%in%(c(region1,region2,region3))) %>%
                   group_by(esr_region,newdate) %>% 
                   summarise(meantemp=mean(meansst,na.rm=TRUE)),
                 aes(newdate,meantemp,col='mean.color'),size=0.65,linetype="solid") +
@@ -614,7 +622,7 @@ server <- function(input, output, session) {
       scale_color_manual(name="",
                          breaks=c('current.year.color','last.year.color','mygrey','mean.color'),
                          values=c('current.year.color'=current.year.color,'last.year.color'=last.year.color,'mygrey'=SeagrassGreen4,'mean.color'=mean.color),
-                         labels=c(current.year,last.year,paste0('1985-',last.year-1),mean.lab)) +
+                         labels=c(current.year,last.year,paste0('1985-',last.year-1),mean_lab)) +
       scale_linetype_manual(values=c("solid","solid","solid","dashed")) +
       scale_y_continuous(breaks=c(0,5,10))+
       ylab("Sea Surface Temperature (°C)") + 
@@ -638,8 +646,11 @@ server <- function(input, output, session) {
     ggdraw(mylines_base)
   }
   
-  pa1 <- reactive(AIplotfun("Eastern Aleutians","Central Aleutians","Western Aleutians") + 
-    draw_image("Figures/fisheries_header_logo_jul2019.png",scale=0.2,x=mylogox,y=mylogoy,hjust=0.40))
+  pa1 <- reactive({
+    mp <- mean_period()
+    AIplotfun("Eastern Aleutians", "Central Aleutians", "Western Aleutians", mp$years, mp$lab) +
+      draw_image("Figures/fisheries_header_logo_jul2019.png", scale = 0.2, x = mylogox, y = mylogoy, hjust = 0.40)
+  })
   
   # Use heatwaveR package to detect marine heatwaves.
   AImhw <- reactive({
